@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Forma Issue Transfer Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f7f7f7; color: #222; }
+        .card { background: white; padding: 20px; border-radius: 10px; max-width: 1200px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h1, h2 { margin-top: 0; }
+        label { font-weight: 600; display: block; margin-top: 12px; margin-bottom: 6px; }
+        input, select, button, textarea { padding: 10px; font-size: 14px; width: 100%;
+                                          max-width: 700px; box-sizing: border-box; }
+        button { cursor: pointer; margin-top: 14px; width: auto; min-width: 180px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; text-align: left; }
+        th { background: #efefef; }
+        .row { display: flex; gap: 30px; flex-wrap: wrap; }
+        .col { flex: 1; min-width: 320px; }
+        .status { padding: 10px; margin-top: 10px; background: #eef5ff;
+                  border-left: 4px solid #3b82f6; white-space: pre-wrap; }
+        .error-status { background: #fff0f0; border-left: 4px solid #e53e3e; }
+        .hint { font-size: 13px; color: #555; margin-top: 4px; }
+        .readonly { background: #f3f4f6; }
+        .options-row { display: flex; gap: 24px; margin-top: 10px; align-items: center; }
+        .options-row label { margin: 0; font-weight: normal; display: flex; align-items: center; gap: 6px; }
+        .options-row input[type=checkbox] { width: auto; padding: 0; }
+        #errorTable  { display: none; margin-top: 16px; }
+        #matchTable  { display: none; margin-top: 16px; }
+        #activePanel { display: none; margin-top: 16px; background: #f0fdf4;
+                       border: 1px solid #86efac; border-radius: 8px; padding: 14px; }
+        #activePanel h3 { color: #166534; margin-bottom: 8px; margin-top: 0; }
+        .active-chip { display: inline-block; background: #dcfce7; border: 1px solid #86efac;
+                       border-radius: 12px; padding: 2px 10px; margin: 3px;
+                       font-size: 12px; color: #166534; }
+        .badge-ok   { color: #16a34a; font-weight: 600; }
+        .badge-warn { color: #b45309; font-weight: 600; }
+        .badge-err  { color: #dc2626; font-weight: 600; }
+        .method-pill { font-size: 11px; background: #f3f4f6; border-radius: 4px;
+                       padding: 2px 6px; font-family: monospace; }
+    </style>
+</head>
+<body>
+ 
+<!-- Auth -->
+<div class="card">
+    <h1>Forma Issues Transfer Tool</h1>
+    <p>Authenticate, paste source and destination project URLs or IDs,
+       preview issues, then transfer selected or all issues.
+    </p>
+    <button onclick="authenticate()">Authenticate with Autodesk</button>
+    <div id="authStatus" class="status">Not authenticated yet.</div>
+</div>
+ 
+<!-- Project Selection -->
+<div class="card">
+    <h2>Project Selection</h2>
+    <div class="row">
+        <div class="col">
+            <label for="sourceProjectInput">Source Project URL or ID</label>
+            <input id="sourceProjectInput" type="text"
+                   placeholder="Paste ACC Issues URL or project ID" />
+            <div class="hint">
+                Example: https://acc.autodesk.com/build/issues/projects/bb2682e0-e01b-4b41-a267-ff478856ca4e/issues
+            </div>
+            <label for="sourceProjectResolved">Resolved Source Project ID</label>
+            <input id="sourceProjectResolved" class="readonly" type="text" readonly />
+            <label for="destProjectInput">Destination Project URL or ID</label>
+            <input id="destProjectInput" type="text"
+                   placeholder="Paste ACC Issues URL or project ID" />
+            <label for="destProjectResolved">Resolved Destination Project ID</label>
+            <input id="destProjectResolved" class="readonly" type="text" readonly />
+            <button onclick="resolveProjects()">Resolve Project IDs</button>
+            <button onclick="previewIssues()">Preview Source Issues</button>
+        </div>
+    </div>
+</div>
+ 
+<!-- Source Issues + Transfer -->
+<div class="card">
+    <h2>Source Issues</h2>
+ 
+    <div class="options-row">
+        <label><input type="checkbox" id="optComments"    checked /> Copy Comments</label>
+        <label><input type="checkbox" id="optAttachments" checked /> Copy Attachments</label>
+        <span class="hint" style="margin-left:8px">
+           
+        </span>
+    </div>
+ 
+    <div style="margin-top:14px">
+        <button onclick="toggleAll(true)">Select All</button>
+        <button onclick="toggleAll(false)">Clear All</button>
+        <button onclick="transferSelected()">Transfer Selected Issues</button>
+        <button onclick="transferAll()">Transfer All Issues</button>
+    </div>
+ 
+    <div id="transferStatus" class="status">No transfer started.</div>
+ 
+    <!-- Active destination types (shown after transfer) -->
+    <div id="activePanel">
+        <h3>✅ Active Destination Types Used for Mapping</h3>
+        <p style="font-size:13px;color:#166534;margin:0 0 8px">
+            Only these active types were eligible. Inactive types (e.g. Observation, Punch List)
+            were automatically redirected to the nearest match below.
+        </p>
+        <div id="activeTypeChips"></div>
+    </div>
+ 
+    <!-- Per-issue type match report -->
+    <div id="matchTable">
+        <h3>Type Match Report</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Source Issue ID</th>
+                    <th>Match Method</th>
+                    <th>Dest Issue ID</th>
+                </tr>
+            </thead>
+            <tbody id="matchTableBody"></tbody>
+        </table>
+    </div>
+ 
+    <!-- Per-issue errors -->
+    <div id="errorTable">
+        <h3>Issues that failed to clone</h3>
+        <table>
+            <thead><tr><th>Issue ID</th><th>Error</th></tr></thead>
+            <tbody id="errorTableBody"></tbody>
+        </table>
+    </div>
+ 
+    <!-- Issues preview table -->
+    <table id="issuesTable">
+        <thead>
+            <tr>
+                <th>Select</th><th>Title</th><th>Status</th><th>Type</th>
+                <th>Assigned To</th><th>Watchers</th>
+                <th>Start Date</th><th>Due Date</th><th>Created At</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+ 
+<script>
+let issueCache = [];
+ 
+function setStatus(id, msg, isError) {
+    const el = document.getElementById(id);
+    el.innerText = msg;
+    el.className = 'status' + (isError ? ' error-status' : '');
+}
+ 
+async function authenticate() {
+    const res  = await fetch('/api/auth');
+    const data = await res.json();
+    setStatus(
+        'authStatus',
+        data.status === 'authenticated' ? 'Authenticated successfully.' : 'Authentication failed: ' + (data.error || 'Unknown error'),
+        data.status !== 'authenticated'
+    );
+}
+ 
+async function loadDefaults() {
+    const res  = await fetch('/api/status');
+    const data = await res.json();
+    if (data.defaultSourceProjectId) {
+        document.getElementById('sourceProjectInput').value    = data.defaultSourceProjectId;
+        document.getElementById('sourceProjectResolved').value = data.defaultSourceProjectId;
+    }
+    if (data.defaultDestProjectId) {
+        document.getElementById('destProjectInput').value    = data.defaultDestProjectId;
+        document.getElementById('destProjectResolved').value = data.defaultDestProjectId;
+    }
+}
+ 
+async function resolveProjects() {
+    const res  = await fetch('/api/resolve-projects', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            source:      document.getElementById('sourceProjectInput').value,
+            destination: document.getElementById('destProjectInput').value,
+        })
+    });
+    const data = await res.json();
+    if (data.error) { setStatus('transferStatus', data.error, true); return; }
+    document.getElementById('sourceProjectResolved').value = data.sourceProjectId || '';
+    document.getElementById('destProjectResolved').value   = data.destProjectId   || '';
+    setStatus('transferStatus', 'Project IDs resolved successfully.');
+}
+ 
+async function previewIssues() {
+    const src = document.getElementById('sourceProjectResolved').value;
+    if (!src) { setStatus('transferStatus', 'Resolve the source project ID first.', true); return; }
+    setStatus('transferStatus', 'Loading source issues...');
+    const res  = await fetch('/api/projects/' + encodeURIComponent(src) + '/issues');
+    const data = await res.json();
+    if (data.error) { setStatus('transferStatus', data.error, true); return; }
+ 
+    issueCache = data.issues || [];
+    const tbody = document.querySelector('#issuesTable tbody');
+    tbody.innerHTML = '';
+    issueCache.forEach(issue => {
+        const row = document.createElement('tr');
+        const td  = (val) => '<td>' + (val || '') + '</td>';
+        row.innerHTML =
+            '<td><input type="checkbox" class="issueCheckbox" value="' + issue.id + '" /></td>' +
+            td(issue.title) +
+            td(issue.status) +
+            td(issue.issueType) +
+            td(issue.assignedTo || 'Unassigned') +
+            '<td>' + (issue.watcherCount > 0 ? issue.watcherCount + ' watcher(s)' : '-') + '</td>' +
+            td(issue.startDate || '-') +
+            td(issue.dueDate   || '-') +
+            td(issue.createdAt);
+        tbody.appendChild(row);
+    });
+    setStatus('transferStatus', issueCache.length + ' issues loaded from source project.');
+}
+ 
+function toggleAll(checked) {
+    document.querySelectorAll('.issueCheckbox').forEach(cb => cb.checked = checked);
+}
+ 
+function getSelectedIssueIds() {
+    return Array.from(document.querySelectorAll('.issueCheckbox:checked')).map(cb => cb.value);
+}
+ 
+async function doTransfer(issueIds) {
+    const sourceProjectId = document.getElementById('sourceProjectResolved').value;
+    const destProjectId   = document.getElementById('destProjectResolved').value;
+    const copyComments    = document.getElementById('optComments').checked;
+    const copyAttachments = document.getElementById('optAttachments').checked;
+ 
+    if (!sourceProjectId || !destProjectId) {
+        setStatus('transferStatus', 'Resolve both project IDs first.', true); return;
+    }
+    const sameProject = sourceProjectId === destProjectId;
+    const sameProjectNote = sameProject ? '\n    issues duplicated within the same project' : '';
+    setStatus('transferStatus', 'Cloning issues via API... this may take a moment.' + sameProjectNote);
+    document.getElementById('errorTable').style.display  = 'none';
+    document.getElementById('matchTable').style.display  = 'none';
+    document.getElementById('activePanel').style.display = 'none';
+    document.getElementById('errorTableBody').innerHTML  = '';
+    document.getElementById('matchTableBody').innerHTML  = '';
+    document.getElementById('activeTypeChips').innerHTML = '';
+ 
+    const res = await fetch('/api/transfer', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceProjectId, destProjectId, issueIds, copyComments, copyAttachments })
+    });
+    const data = await res.json();
+    if (data.error) { setStatus('transferStatus', 'Transfer failed: ' + data.error, true); return; }
+ 
+    const ms       = data.typeMatchSummary || {};
+    const permWarn = data.permissionsVerified ? '' :
+        '\n⚠️  /users/me permission check could not be verified (proceeded anyway).';
+ 
+    const lines = [
+        '[COMPLETE] Transfer finished.' + permWarn,
+        '',
+        'Fields cloned per issue:',
+        '  Title, Description, Status, Type/Subtype,',
+        '  Assignee, Watchers, Start Date, Due Date,',
+        '  Comments    : ' + (copyComments    ? 'YES' : 'SKIPPED'),
+        '  Attachments : ' + (copyAttachments ? 'YES' : 'SKIPPED'),
+        '',
+        'Not cloned (API limits): Placement, Thumbnail, References, and Custom fields',
+    ];
+    setStatus('transferStatus', lines.join('\n'), false);
+ 
+    // Active types panel
+    const activeTypes = data.activeDestTypes || [];
+    if (activeTypes.length > 0) {
+        const chips = document.getElementById('activeTypeChips');
+        activeTypes.forEach(t => {
+            const chip = document.createElement('span');
+            chip.className = 'active-chip';
+            chip.title     = 'Active subtypes: ' + t.subtypes.join(', ');
+            chip.textContent = t.typeTitle + ' (' + t.subtypes.length + ' subtype' +
+                               (t.subtypes.length !== 1 ? 's' : '') + ')';
+            chips.appendChild(chip);
+        });
+        document.getElementById('activePanel').style.display = 'block';
+    }
+ 
+    // Per-issue type match report
+    if (data.results && data.results.length > 0) {
+        const tbody = document.getElementById('matchTableBody');
+        data.results.forEach(r => {
+            const isExact    = r.matchMethod === 'uuid_direct' || r.matchMethod === 'title_exact';
+            const isFallback = r.usedFallback;
+            const badgeClass = isExact ? 'badge-ok' : isFallback ? 'badge-err' : 'badge-warn';
+            const row = document.createElement('tr');
+            row.innerHTML =
+                '<td>'  + (r.title || '') + '</td>' +
+                '<td style="font-size:11px">' + (r.sourceIssueId || '') + '</td>' +
+                '<td class="' + badgeClass + '"><span class="method-pill">' + (r.matchMethod || '') + '</span></td>' +
+                '<td style="font-size:11px">' + (r.destIssueId   || '') + '</td>';
+            tbody.appendChild(row);
+        });
+        document.getElementById('matchTable').style.display = 'block';
+    }
+ 
+    // Error table
+    if (data.errors && data.errors.length > 0) {
+        const tbody = document.getElementById('errorTableBody');
+        data.errors.forEach(e => {
+            const row = document.createElement('tr');
+            row.innerHTML = '<td>' + e.issueId + '</td><td>' + e.error + '</td>';
+            tbody.appendChild(row);
+        });
+        document.getElementById('errorTable').style.display = 'block';
+    }
+}
+ 
+async function transferSelected() {
+    const ids = getSelectedIssueIds();
+    if (ids.length === 0) { setStatus('transferStatus', 'No issues selected.', true); return; }
+    await doTransfer(ids);
+}
+ 
+async function transferAll() { await doTransfer([]); }
+ 
+window.addEventListener('DOMContentLoaded', loadDefaults);
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

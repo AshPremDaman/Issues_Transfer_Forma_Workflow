@@ -1,0 +1,12 @@
+{
+    // Use the same interpreter we configured for this workspace
+    "python.defaultInterpreterPath": "C:\\Program Files\\Python313\\python.exe",
+
+    // Make the acc_oauth package importable by the language server (optional)
+    "python.analysis.extraPaths": [
+        "./acc_oauth"
+    ],
+
+    // Ensure Pylance indexes workspace packages
+    "python.analysis.indexing": true
+}
