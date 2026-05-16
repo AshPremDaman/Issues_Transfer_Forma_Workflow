@@ -148,9 +148,6 @@ Issues linked to clash or model locations (pushpins) cannot be transferred throu
 ### Issue Thumbnails Not Replicated
 Thumbnails are tied to model placement and cannot be recreated via the API. File attachments may be uploaded as a workaround but will not behave the same as native model-based thumbnails.
 
-### Custom Fields Not Transferred
-The Autodesk Issues API write endpoint does not currently support custom attribute fields. Only standard issue fields are cloned.
-
 ### Issue Cross-References Re-linked as Attachments
 Native issue-to-issue links are not supported on write. Where applicable, references are re-attached as file attachments rather than native issue links.
 
@@ -189,13 +186,13 @@ Issues_Transfer_Forma_Workflow/
 
 ## References
 
-- [Autodesk Platform Services — Issues API](https://aps.autodesk.com/en/docs/acc/v1/reference/http/issues-v2/)
+- [Autodesk Platform Services — Issues API](https://aps.autodesk.com/en/docs/acc/v1/overview/field-guide/issues/)
 - [Autodesk Platform Services — Authentication (OAuth 2.0)](https://aps.autodesk.com/en/docs/oauth/v2/developers_guide/overview/)
 - [Autodesk Platform Services — Data Management (OSS)](https://aps.autodesk.com/en/docs/data/v2/developers_guide/overview/)
-- [BIM360 Relationships API](https://aps.autodesk.com/en/docs/bim360/v1/reference/http/relationships/)
+- [BIM360 Relationships API](https://aps.autodesk.com/en/docs/acc/v1/overview/field-guide/relationships/)
 
 ---
 
 ## Developed By
 
-Port of Seattle — IT / Digital Delivery team. Built to streamline issue migration and coordination workflows across Autodesk Forma projects.
+Port of Seattle — Design Technology Team - Ashvath Premkumar. Built to streamline issue migration and coordination workflows across Autodesk Forma projects.
