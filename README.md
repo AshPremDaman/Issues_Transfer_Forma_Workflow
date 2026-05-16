@@ -189,7 +189,7 @@ Issues_Transfer_Forma_Workflow/
 
 ## References
 
-- [Autodesk Platform Services — Issues API](https://aps.autodesk.com/en/docs/acc/v1/reference/http/issues-v2/)
+- [Autodesk Platform Services — Issues API](https://aps.autodesk.com/en/docs/acc/v1/overview/field-guide/issues/)
 - [Autodesk Platform Services — Authentication (OAuth 2.0)](https://aps.autodesk.com/en/docs/oauth/v2/developers_guide/overview/)
 - [Autodesk Platform Services — Data Management (OSS)](https://aps.autodesk.com/en/docs/data/v2/developers_guide/overview/)
 - [BIM360 Relationships API](https://aps.autodesk.com/en/docs/bim360/v1/reference/http/relationships/)
@@ -198,4 +198,4 @@ Issues_Transfer_Forma_Workflow/
 
 ## Developed By
 
-Port of Seattle — IT / Digital Delivery team. Built to streamline issue migration and coordination workflows across Autodesk Forma projects.
+Port of Seattle — Design Technology Team - Ashvath Premkumar. Built to streamline issue migration and coordination workflows across Autodesk Forma projects.
